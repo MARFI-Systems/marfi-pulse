@@ -26,7 +26,9 @@ import {
   DASHBOARD_URL,
   CAPTCHA_ENABLED,
   CAPTCHA_SITE_KEY,
+  env,
 } from "Common/UI/Config";
+import HexclaveLogin from "./HexclaveLogin";
 import OneUptimeLogo from "Common/UI/Images/logos/OneUptimeSVG/3-transparent.svg";
 import EditionLabel from "Common/UI/Components/EditionLabel/EditionLabel";
 import UiAnalytics from "Common/UI/Utils/Analytics";
@@ -81,7 +83,7 @@ interface PasskeyAttempt {
   canCancel: boolean;
 }
 
-const LoginPage: () => JSX.Element = () => {
+const NativeLoginPage: () => JSX.Element = () => {
   const { t } = useTranslation();
   const apiUrl: URL = LOGIN_API_URL;
 
@@ -1702,6 +1704,13 @@ const LoginPage: () => JSX.Element = () => {
       </div>
     </div>
   );
+};
+
+const LoginPage: () => JSX.Element = () => {
+  if (env("HEXCLAVE_ENABLED") === "true") {
+    return <HexclaveLogin />;
+  }
+  return <NativeLoginPage />;
 };
 
 export default LoginPage;

@@ -17,16 +17,10 @@ export const config = {
       allowSignIn: true,
     },
     passkey: {
-      allowSignIn: true,
+      allowSignIn: false,
     },
     oauth: {
-      providers: {
-        github: {
-          type: "github",
-          allowSignIn: true,
-          allowConnectedAccounts: true,
-        },
-      },
+      providers: {},
     },
   },
 };

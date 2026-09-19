@@ -32,6 +32,7 @@
     ]
   },
   "dependencies": {
+    "@hexclave/js": "^1.0.67",
     "Common": "file:../../../Common",
     "ejs": "^3.1.10",
     "i18next": "^23.16.8",
