@@ -64,6 +64,7 @@ const HexclaveLogin: () => JSX.Element = () => {
   );
   const [email, setEmail] = React.useState<string>("");
   const [code, setCode] = React.useState<string>("");
+  const [otpNonce, setOtpNonce] = React.useState<string>("");
   const [step, setStep] = React.useState<"email" | "code">("email");
   const [message, setMessage] = React.useState<string>("");
   const [busy, setBusy] = React.useState<boolean>(false);
@@ -112,6 +113,9 @@ const HexclaveLogin: () => JSX.Element = () => {
       if (result?.status === "error") {
         throw result.error || new Error("Could not send a code.");
       }
+      const nonce: string =
+        (result && result.data && result.data.nonce) || "";
+      setOtpNonce(nonce);
       setCode("");
       setStep("code");
       setMessage("");
@@ -131,12 +135,11 @@ const HexclaveLogin: () => JSX.Element = () => {
     setBusy(true);
     setMessage("");
     try {
-      const result: any = await app.current.signInWithMagicLink(
-        code.trim(),
-        {
-          noRedirect: true,
-        },
-      );
+      const otp: string = code.trim();
+      const fullCode: string = otpNonce ? otp + otpNonce : otp;
+      const result: any = await app.current.signInWithMagicLink(fullCode, {
+        noRedirect: true,
+      });
       if (result?.status === "error") {
         setMessage("That code was not accepted. Request a new one.");
         return;
