@@ -1,11 +1,13 @@
 import React from "react";
 import { HexclaveClientApp } from "@hexclave/js";
-import OneUptimeLogo from "Common/UI/Images/logos/OneUptimeSVG/3-transparent.svg";
 import { DASHBOARD_URL, IDENTITY_URL, env } from "Common/UI/Config";
 import Route from "Common/Types/API/Route";
 import URL from "Common/Types/API/URL";
 import Navigation from "Common/UI/Utils/Navigation";
 import UserUtil from "Common/UI/Utils/User";
+import marfiLogo from "../Images/marfi-logo.png";
+import syneFont from "../Fonts/syne-500-700-latin.woff2";
+import monoFont from "../Fonts/dm-mono-500-latin.woff2";
 
 const HEXCLAVE_API_ORIGIN: string = "https://apigcp.hexclave.com";
 const ALLOWED_EMAIL_DOMAIN: string = "marfi.io";
@@ -87,7 +89,7 @@ const HexclaveLogin: () => JSX.Element = () => {
       return;
     }
     if (!app.current) {
-      setMessage("Hexclave login is not configured.");
+      setMessage("Sign-in is not configured.");
       return;
     }
     setBusy(true);
@@ -112,7 +114,7 @@ const HexclaveLogin: () => JSX.Element = () => {
 
   const verifyCode: () => Promise<void> = async (): Promise<void> => {
     if (!app.current) {
-      setMessage("Hexclave login is not configured.");
+      setMessage("Sign-in is not configured.");
       return;
     }
     setBusy(true);
@@ -148,31 +150,133 @@ const HexclaveLogin: () => JSX.Element = () => {
   };
 
   return (
-    <div className="flex min-h-full flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <img
-          className="mx-auto h-12 w-auto"
-          src={OneUptimeLogo}
-          alt="MARFI Pulse"
-        />
-        <h2 className="mt-6 text-center text-2xl font-bold text-gray-900">
-          Sign in to MARFI Pulse
-        </h2>
-        <p className="mt-2 text-center text-sm text-gray-500">
-          We will email you a one-time code.
-        </p>
-      </div>
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+    <div className="marfi-auth-page">
+      <style>{`
+        @font-face {
+          font-family: 'MARFI Auth Syne';
+          font-style: normal;
+          font-weight: 500 700;
+          font-display: swap;
+          src: url(${JSON.stringify(syneFont)}) format('woff2');
+        }
+        @font-face {
+          font-family: 'MARFI Auth Mono';
+          font-style: normal;
+          font-weight: 500;
+          font-display: swap;
+          src: url(${JSON.stringify(monoFont)}) format('woff2');
+        }
+        .marfi-auth-page {
+          display: flex;
+          flex-direction: column;
+          min-height: 100vh;
+          min-height: 100svh;
+          padding: 0 clamp(24px, 5vw, 84px);
+          color: #f2eee7;
+          background: radial-gradient(ellipse at 15% 45%, #141823 0, transparent 56%), #08090d;
+          color-scheme: dark;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        .marfi-auth-page *, .marfi-auth-page *::before, .marfi-auth-page *::after { box-sizing: border-box; }
+        .marfi-auth-page a:focus-visible, .marfi-auth-page button:focus-visible { outline: 2px solid #99e7df; outline-offset: 5px; }
+        .marfi-auth-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 20px;
+          height: 88px;
+          flex-shrink: 0;
+          border-bottom: 1px solid rgba(255, 255, 255, .14);
+        }
+        .marfi-auth-brand { display: inline-flex; align-items: center; gap: 12px; color: #f2eee7; font: 700 17px 'MARFI Auth Syne', sans-serif; letter-spacing: .18em; text-decoration: none; }
+        .marfi-auth-brand img { width: 36px; height: 36px; }
+        .marfi-auth-back { color: #999ba5; font: 500 10px 'MARFI Auth Mono', monospace; letter-spacing: .07em; text-transform: uppercase; text-decoration: none; }
+        .marfi-auth-back:hover { color: #f2eee7; }
+        .marfi-auth-main { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 8vw; flex: 1; padding: 64px 0; }
+        .marfi-auth-lockup { font: 500 clamp(64px, 8.2vw, 132px)/.94 'MARFI Auth Syne', sans-serif; letter-spacing: -.055em; }
+        .marfi-auth-lockup span { display: block; }
+        .marfi-auth-lockup span:last-child { color: #ff5362; }
+        .marfi-auth-card { width: 100%; max-width: 460px; justify-self: end; padding: clamp(24px, 3vw, 42px); border: 1px solid rgba(255, 255, 255, .14); background: #101219; }
+        .marfi-auth-card h1 { margin: 0 0 12px; color: #f2eee7; text-align: left; font: 500 32px/1.15 'MARFI Auth Syne', sans-serif; letter-spacing: -.035em; }
+        .marfi-auth-card p.lede { margin: 0 0 28px; color: #b9bac1; font-size: 14px; }
+        .marfi-auth-card label { display: block; color: #b9bac1; font: 500 10px/1.5 'MARFI Auth Mono', monospace; letter-spacing: .07em; padding: 10px 0; text-transform: uppercase; }
+        .marfi-auth-card input {
+          width: 100%;
+          height: 48px;
+          border: 1px solid rgba(255, 255, 255, .2);
+          border-radius: 0;
+          padding: 12px 14px;
+          color: #f2eee7;
+          background: #08090d;
+          font-size: 15px;
+        }
+        .marfi-auth-card input:focus { border-color: #ff5362; outline: 1px solid #ff5362; outline-offset: 2px; }
+        .marfi-auth-card button.primary {
+          width: 100%;
+          min-height: 48px;
+          margin-top: 16px;
+          border: 1px solid #de3c4b;
+          border-radius: 0;
+          color: #08090d;
+          background: #de3c4b;
+          font: 500 11px 'MARFI Auth Mono', monospace;
+          letter-spacing: .07em;
+          text-transform: uppercase;
+          cursor: pointer;
+        }
+        .marfi-auth-card button.primary:hover { color: #ff5362; background: transparent; border-color: #ff5362; }
+        .marfi-auth-card button.primary:disabled { opacity: .6; cursor: not-allowed; }
+        .marfi-auth-card button.linkish {
+          width: 100%;
+          margin-top: 12px;
+          border: 0;
+          background: transparent;
+          color: #b9bac1;
+          font-size: 12px;
+          text-underline-offset: 3px;
+          cursor: pointer;
+        }
+        .marfi-auth-card button.linkish:hover { color: #f2eee7; text-decoration: underline; }
+        .marfi-auth-card button.linkish:disabled { color: #666; cursor: not-allowed; text-decoration: none; }
+        .marfi-auth-card .error { margin-top: 16px; color: #ff5362; font-size: 13px; }
+        .marfi-auth-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 18px 30px; padding: 22px 0; border-top: 1px solid rgba(255, 255, 255, .14); color: #999ba5; font: 500 10px/1.7 'MARFI Auth Mono', monospace; }
+        .marfi-auth-footer nav { display: flex; gap: 24px; }
+        .marfi-auth-footer a { color: #b9bac1; text-decoration: underline; text-underline-offset: 3px; }
+        .marfi-auth-footer a:hover { color: #f2eee7; }
+        .marfi-auth-attribution { margin-left: auto; }
+        @media (max-width: 760px) {
+          .marfi-auth-header { height: 76px; }
+          .marfi-auth-main { grid-template-columns: 1fr; gap: 36px; padding: 40px 0; }
+          .marfi-auth-lockup { font-size: clamp(48px, 13vw, 76px); }
+          .marfi-auth-lockup span { display: inline; }
+          .marfi-auth-card { max-width: none; }
+          .marfi-auth-footer { font-size: 9px; }
+        }
+      `}</style>
+      <header className="marfi-auth-header">
+        <a className="marfi-auth-brand" href="https://marfi.ai" aria-label="MARFI home">
+          <img src={marfiLogo} alt="" width="36" height="36" />
+          <span>MARFI</span>
+        </a>
+        <a className="marfi-auth-back" href="https://marfi.ai">
+          Back to MARFI
+        </a>
+      </header>
+      <main className="marfi-auth-main">
+        <div className="marfi-auth-lockup" aria-hidden="true">
+          <span>MARFI</span>
+          <span>Pulse</span>
+        </div>
+        <section className="marfi-auth-card" aria-label="Account sign-in">
+          <h1>Sign in</h1>
+          <p className="lede">We will email you a one-time code. No password.</p>
           {step === "email" ? (
             <>
-              <label className="block text-sm font-medium text-gray-700">
-                Email
-              </label>
+              <label htmlFor="marfi-pulse-email">Email</label>
               <input
+                id="marfi-pulse-email"
                 type="email"
                 autoComplete="email"
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
                 value={email}
                 onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
                   setEmail(event.target.value);
@@ -180,8 +284,8 @@ const HexclaveLogin: () => JSX.Element = () => {
               />
               <button
                 type="button"
+                className="primary"
                 disabled={busy}
-                className="mt-4 w-full rounded-md bg-indigo-600 px-3 py-2 text-white disabled:opacity-50"
                 onClick={() => {
                   void sendCode();
                 }}
@@ -191,17 +295,18 @@ const HexclaveLogin: () => JSX.Element = () => {
             </>
           ) : (
             <>
-              <p className="text-sm text-gray-600">
+              <p className="lede">
                 Enter the code we emailed to {email.trim()}. Do not change the
                 capitalization.
               </p>
+              <label htmlFor="marfi-pulse-code">Code</label>
               <input
+                id="marfi-pulse-code"
                 type="text"
                 autoComplete="one-time-code"
                 autoCapitalize="off"
                 autoCorrect="off"
                 spellCheck={false}
-                className="mt-3 block w-full rounded-md border border-gray-300 px-3 py-2"
                 value={code}
                 onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
                   setCode(event.target.value);
@@ -209,8 +314,8 @@ const HexclaveLogin: () => JSX.Element = () => {
               />
               <button
                 type="button"
+                className="primary"
                 disabled={busy}
-                className="mt-4 w-full rounded-md bg-indigo-600 px-3 py-2 text-white disabled:opacity-50"
                 onClick={() => {
                   void verifyCode();
                 }}
@@ -219,8 +324,8 @@ const HexclaveLogin: () => JSX.Element = () => {
               </button>
               <button
                 type="button"
+                className="linkish"
                 disabled={busy || resendRemaining > 0}
-                className="mt-2 w-full text-sm text-indigo-600 disabled:text-gray-400"
                 onClick={() => {
                   void sendCode();
                 }}
@@ -231,18 +336,27 @@ const HexclaveLogin: () => JSX.Element = () => {
               </button>
             </>
           )}
-          {message ? (
-            <p className="mt-4 text-sm text-red-600">{message}</p>
-          ) : (
-            <></>
-          )}
-          <p className="mt-6 text-center text-xs text-gray-400">
-            <a className="underline" href="/accounts/login?native=1">
-              Admin password sign-in
-            </a>
-          </p>
-        </div>
-      </div>
+          {message ? <p className="error">{message}</p> : <></>}
+        </section>
+      </main>
+      <footer className="marfi-auth-footer">
+        <nav aria-label="Legal and security">
+          <a href="https://marfi.ai/legal/privacy/" target="_blank" rel="noopener">
+            Privacy
+          </a>
+          <a href="https://marfi.ai/legal/terms/" target="_blank" rel="noopener">
+            Terms
+          </a>
+          <a href="https://trust.marfi.io/monitoring" target="_blank" rel="noopener">
+            Security
+          </a>
+        </nav>
+        <span className="marfi-auth-attribution">
+          <a href="https://oneuptime.com" target="_blank" rel="noopener">
+            OneUptime
+          </a>
+        </span>
+      </footer>
     </div>
   );
 };

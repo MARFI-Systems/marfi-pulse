@@ -9,6 +9,9 @@ import {
 import Navigation from "Common/UI/Utils/Navigation";
 import PageLoader from "Common/UI/Components/Loader/PageLoader";
 import Footer from "./Components/Footer/Footer";
+import { env } from "Common/UI/Config";
+
+const hexclaveOn: boolean = env("HEXCLAVE_ENABLED") === "true";
 
 // Lazy load page components
 const ForbiddenPage: React.LazyExoticComponent<() => JSX.Element> = lazy(() => {
@@ -59,13 +62,16 @@ function App(): ReactElement {
             <Route path="/accounts/login" element={<LoginPage />} />
             <Route
               path="/accounts/mobile-passkey"
-              element={<MobilePasskeyPage />}
+              element={hexclaveOn ? <LoginPage /> : <MobilePasskeyPage />}
             />
             <Route path="/accounts/forbidden" element={<ForbiddenPage />} />
-            <Route path="/accounts/sso" element={<LoginWithSSO />} />
+            <Route
+              path="/accounts/sso"
+              element={hexclaveOn ? <LoginPage /> : <LoginWithSSO />}
+            />
             <Route
               path="/accounts/forgot-password"
-              element={<ForgotPasswordPage />}
+              element={hexclaveOn ? <LoginPage /> : <ForgotPasswordPage />}
             />
             {/*
              * Both forms of each token-bearing route are registered. The head
@@ -77,13 +83,16 @@ function App(): ReactElement {
              */}
             <Route
               path="/accounts/reset-password"
-              element={<ResetPasswordPage />}
+              element={hexclaveOn ? <LoginPage /> : <ResetPasswordPage />}
             />
             <Route
               path="/accounts/reset-password/:token"
-              element={<ResetPasswordPage />}
+              element={hexclaveOn ? <LoginPage /> : <ResetPasswordPage />}
             />
-            <Route path="/accounts/register" element={<RegisterPage />} />
+            <Route
+              path="/accounts/register"
+              element={hexclaveOn ? <LoginPage /> : <RegisterPage />}
+            />
             <Route path="/accounts/verify-email" element={<VerifyEmail />} />
             <Route
               path="/accounts/verify-email/:token"
@@ -93,7 +102,7 @@ function App(): ReactElement {
             <Route path="*" element={<NotFound />} />
           </Routes>
         </div>
-        <Footer />
+        {hexclaveOn ? <></> : <Footer />}
       </Suspense>
     </div>
   );
