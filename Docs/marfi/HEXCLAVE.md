@@ -29,3 +29,7 @@ Live Pulse: still stock OneUptime 13.0.5 on Elestio. Do not cut over until a tes
 5. Point Elestio at this fork only after Danny signs in via Hexclave in a non-prod check.
 
 Native OneUptime reset-link login remains the live path until that cutover.
+
+## CI
+- Upstream OneUptime workflows parked in `.github/upstream-workflows/` (do not run on this fork).
+- Trivy on Monk `monkci-ubuntu-24.04-2` via `.github/workflows/trivy-security.yml`.

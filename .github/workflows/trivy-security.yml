@@ -1,0 +1,189 @@
+name: Trivy Security Scan
+
+# MARFI caller. Runs on Monk 2-vCPU (Danny 2026-09-04 cheapest-tier order).
+# SHA-pinned actions match MARFI-Systems/trivy-security-scan@7446cde8b4ca7180b65edd23f6e9fb16d1853916.
+# FS/IaC/secret scan only: this fork has no root Dockerfile, only .tpl and Examples.
+on:
+  push:
+    branches: [master, main, marfi/hexclave-pilot]
+  pull_request:
+    branches: [master, main]
+  schedule:
+    - cron: '17 13 * * 1'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: trivy-security-scan-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scan:
+    runs-on: monkci-ubuntu-24.04-2
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Trivy filesystem, dependency, IaC and secret scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: '.'
+          scanners: 'vuln,misconfig,secret'
+          format: json
+          output: trivy-fs-report.json
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'
+          ignore-unfixed: true
+          skip-dirs: 'node_modules,dist,build,.venv,venv,vendor,.next,.git,Examples'
+
+      - name: File or update Trivy findings issue
+        if: github.event_name != 'pull_request' && (github.ref_name == github.event.repository.default_branch || github.ref_name == 'marfi/hexclave-pilot')
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            function loadReport(path) {
+              if (!fs.existsSync(path)) {
+                throw new Error(`Incomplete Trivy report: ${path}`);
+              }
+              const report = JSON.parse(fs.readFileSync(path, 'utf8'));
+              if (!Array.isArray(report.Results)) {
+                throw new Error(`Incomplete Trivy report: ${path}`);
+              }
+              return report;
+            }
+
+            const reports = [loadReport('trivy-fs-report.json')];
+            const vulns = [];
+            const misconfigs = [];
+            const secrets = [];
+
+            for (const report of reports) {
+              for (const result of (report.Results || [])) {
+                for (const v of (result.Vulnerabilities || [])) {
+                  vulns.push({
+                    severity: v.Severity,
+                    pkg: v.PkgName,
+                    installed: v.InstalledVersion,
+                    fixed: v.FixedVersion || 'n/a',
+                    id: v.VulnerabilityID,
+                    target: result.Target,
+                  });
+                }
+                for (const m of (result.Misconfigurations || [])) {
+                  misconfigs.push({
+                    severity: m.Severity,
+                    id: m.ID,
+                    title: m.Title,
+                    target: result.Target,
+                  });
+                }
+                for (const s of (result.Secrets || [])) {
+                  secrets.push({
+                    severity: s.Severity,
+                    rule: s.RuleID,
+                    target: result.Target,
+                    line: s.StartLine,
+                  });
+                }
+              }
+            }
+
+            const total = vulns.length + misconfigs.length + secrets.length;
+            const sevCounts = { CRITICAL: 0, HIGH: 0 };
+            for (const item of [...vulns, ...misconfigs, ...secrets]) {
+              if (sevCounts[item.severity] !== undefined) sevCounts[item.severity]++;
+            }
+
+            const { owner, repo } = context.repo;
+            const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${context.runId}`;
+            const title = 'Trivy Security Findings';
+
+            const existing = await github.rest.issues.listForRepo({
+              owner, repo, state: 'open', labels: 'trivy', per_page: 50,
+            });
+            const trackingIssue = existing.data.find(i => i.title === title);
+
+            if (total === 0) {
+              if (trackingIssue) {
+                await github.rest.issues.createComment({
+                  owner, repo, issue_number: trackingIssue.number,
+                  body: `Latest scan (${runUrl}) found no CRITICAL/HIGH issues. Closing.`,
+                });
+                await github.rest.issues.update({
+                  owner, repo, issue_number: trackingIssue.number, state: 'closed',
+                });
+              }
+              core.info('No CRITICAL/HIGH Trivy findings.');
+              return;
+            }
+
+            const labelNames = ['security', 'trivy'];
+            if (sevCounts.CRITICAL > 0) labelNames.push('severity:critical');
+            if (sevCounts.HIGH > 0) labelNames.push('severity:high');
+
+            const labelColors = {
+              security: 'b60205', trivy: '5319e7',
+              'severity:critical': '7d0f0f', 'severity:high': 'd93f0b',
+            };
+            for (const name of labelNames) {
+              try {
+                await github.rest.issues.getLabel({ owner, repo, name });
+              } catch (e) {
+                try {
+                  await github.rest.issues.createLabel({ owner, repo, name, color: labelColors[name] || 'ededed' });
+                } catch (e2) { /* race-safe */ }
+              }
+            }
+
+            function table(rows, cols) {
+              if (rows.length === 0) return '_None_\n';
+              const header = `| ${cols.map(c => c.h).join(' | ')} |`;
+              const sep = `| ${cols.map(() => '---').join(' | ')} |`;
+              const body = rows.map(r => `| ${cols.map(c => String(r[c.k]).replace(/\|/g, '\\|')).join(' | ')} |`).join('\n');
+              return [header, sep, body].join('\n') + '\n';
+            }
+
+            const body = [
+              `**Automated Trivy scan (Monk 2-vCPU).** Last run: ${new Date().toISOString()} · [workflow run](${runUrl})`,
+              '',
+              `Summary: ${sevCounts.CRITICAL} Critical, ${sevCounts.HIGH} High (filesystem/IaC/secret scan).`,
+              '',
+              '## Vulnerabilities',
+              table(vulns, [
+                { h: 'Severity', k: 'severity' }, { h: 'Package', k: 'pkg' },
+                { h: 'Installed', k: 'installed' }, { h: 'Fixed', k: 'fixed' },
+                { h: 'CVE', k: 'id' }, { h: 'Target', k: 'target' },
+              ]),
+              '## Misconfigurations (IaC)',
+              table(misconfigs, [
+                { h: 'Severity', k: 'severity' }, { h: 'ID', k: 'id' },
+                { h: 'Title', k: 'title' }, { h: 'Target', k: 'target' },
+              ]),
+              '## Secrets',
+              table(secrets, [
+                { h: 'Severity', k: 'severity' }, { h: 'Rule', k: 'rule' },
+                { h: 'Target', k: 'target' }, { h: 'Line', k: 'line' },
+              ]),
+              '',
+              'This issue is updated after successful scans and closed when clean. A coding agent should fix findings on a branch and open a PR; do not edit this issue body by hand.',
+            ].join('\n');
+
+            if (trackingIssue) {
+              await github.rest.issues.update({
+                owner, repo, issue_number: trackingIssue.number,
+                body, state: 'open', labels: labelNames,
+              });
+              core.info(`Updated issue #${trackingIssue.number}`);
+            } else {
+              const created = await github.rest.issues.create({
+                owner, repo, title, body, labels: labelNames,
+              });
+              core.info(`Created issue #${created.data.number}`);
+            }
