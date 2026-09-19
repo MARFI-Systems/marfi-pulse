@@ -45,7 +45,7 @@ const HexclaveLogin: () => JSX.Element = () => {
       baseUrl: HEXCLAVE_API_ORIGIN,
       projectId,
       publishableClientKey,
-      tokenStore: "cookie",
+      tokenStore: "memory",
       analytics: {
         enabled: false,
       },
