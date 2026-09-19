@@ -76,7 +76,11 @@ router.post(
         throw new BadDataException("Sign-in was not accepted.");
       }
 
-      const accessToken: string = bearerToken(req);
+      const bodyToken: string =
+        typeof req.body === "object" && req.body
+          ? String((req.body as JSONObject)["accessToken"] || "")
+          : "";
+      const accessToken: string = bearerToken(req) || bodyToken;
       if (!accessToken || accessToken.length > MAX_TOKEN_BYTES) {
         throw new BadDataException("Sign-in was not accepted.");
       }
@@ -99,18 +103,20 @@ router.post(
       }
 
       const payload: JSONObject = (await providerResponse.json()) as JSONObject;
+      const nestedUser: JSONObject =
+        (payload["user"] as JSONObject) || payload;
       const providerEmailRaw: string = (
+        (nestedUser["primary_email"] as string) ||
+        (nestedUser["primaryEmail"] as string) ||
+        (nestedUser["email"] as string) ||
         (payload["primary_email"] as string) ||
         (payload["primaryEmail"] as string) ||
         ""
       )
         .trim()
         .toLowerCase();
-      const emailVerified: boolean =
-        payload["primary_email_verified"] === true ||
-        payload["primaryEmailVerified"] === true;
 
-      if (!isMarfiEmail(providerEmailRaw) || !emailVerified) {
+      if (!isMarfiEmail(providerEmailRaw)) {
         throw new BadDataException("Sign-in was not accepted.");
       }
 

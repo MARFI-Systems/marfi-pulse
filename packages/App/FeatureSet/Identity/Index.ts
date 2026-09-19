@@ -22,7 +22,7 @@ const IdentityFeatureSet: FeatureSet = {
 
     app.use([`/${APP_NAME}`, "/"], AuthenticationAPI);
 
-    app.use([`/${APP_NAME}`, "/"], HexclaveAPI);
+    app.use([`/${APP_NAME}`, "/identity", "/"], HexclaveAPI);
 
     app.use([`/${APP_NAME}`, "/"], ResellerAPI);
 

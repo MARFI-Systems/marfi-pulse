@@ -1,8 +1,6 @@
 import React from "react";
 import { HexclaveClientApp } from "@hexclave/js";
-import { DASHBOARD_URL, IDENTITY_URL, env } from "Common/UI/Config";
-import Route from "Common/Types/API/Route";
-import URL from "Common/Types/API/URL";
+import { DASHBOARD_URL, env } from "Common/UI/Config";
 import Navigation from "Common/UI/Utils/Navigation";
 import UserUtil from "Common/UI/Utils/User";
 import marfiLogo from "../Images/marfi-logo.png";
@@ -12,9 +10,7 @@ import monoFont from "../Fonts/dm-mono-500-latin.woff2";
 const HEXCLAVE_API_ORIGIN: string = "https://apigcp.hexclave.com";
 const ALLOWED_EMAIL_DOMAIN: string = "marfi.io";
 const RESEND_SECONDS: number = 180;
-const EXCHANGE_URL: URL = URL.fromURL(IDENTITY_URL).addRoute(
-  new Route("/hexclave/exchange"),
-);
+const EXCHANGE_PATH: string = "/api/identity/hexclave/exchange";
 
 const isAllowedEmail: (address: string) => boolean = (
   address: string,
@@ -135,26 +131,34 @@ const HexclaveLogin: () => JSX.Element = () => {
     setBusy(true);
     setMessage("");
     try {
-      const result: any = await app.current.signInWithMagicLink(code, {
-        noRedirect: true,
-      });
+      const result: any = await app.current.signInWithMagicLink(
+        code.trim(),
+        {
+          noRedirect: true,
+        },
+      );
       if (result?.status === "error") {
-        throw result.error || new Error("Code not accepted.");
+        setMessage("That code was not accepted. Request a new one.");
+        return;
       }
       const accessToken: string | null = await app.current.getAccessToken();
       if (!accessToken) {
-        throw new Error("The provider did not issue an access token.");
+        setMessage("Sign-in was not accepted.");
+        return;
       }
-      const response: globalThis.Response = await fetch(EXCHANGE_URL.toString(), {
+      const response: globalThis.Response = await fetch(EXCHANGE_PATH, {
         method: "POST",
         credentials: "same-origin",
         headers: {
           Authorization: `Bearer ${accessToken}`,
           Accept: "application/json",
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify({ accessToken }),
       });
       if (!response.ok) {
-        throw new Error("Sign-in was not accepted.");
+        setMessage("Sign-in was not accepted.");
+        return;
       }
       window.location.assign(DASHBOARD_URL.toString());
     } catch (_err) {
