@@ -236,6 +236,11 @@ const HexclaveLogin: () => JSX.Element = () => {
           ) : (
             <></>
           )}
+          <p className="mt-6 text-center text-xs text-gray-400">
+            <a className="underline" href="/accounts/login?native=1">
+              Admin password sign-in
+            </a>
+          </p>
         </div>
       </div>
     </div>

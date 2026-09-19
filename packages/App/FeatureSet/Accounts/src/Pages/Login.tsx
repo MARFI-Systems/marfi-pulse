@@ -1707,7 +1707,9 @@ const NativeLoginPage: () => JSX.Element = () => {
 };
 
 const LoginPage: () => JSX.Element = () => {
-  if (env("HEXCLAVE_ENABLED") === "true") {
+  const nativeBreakGlass: boolean =
+    new URLSearchParams(window.location.search).get("native") === "1";
+  if (env("HEXCLAVE_ENABLED") === "true" && !nativeBreakGlass) {
     return <HexclaveLogin />;
   }
   return <NativeLoginPage />;
