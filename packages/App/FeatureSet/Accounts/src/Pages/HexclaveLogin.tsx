@@ -63,6 +63,9 @@ const HexclaveLogin: () => JSX.Element = () => {
     });
   }
 
+  const emailInput: React.RefObject<HTMLInputElement> = React.useRef(
+    null,
+  );
   const [email, setEmail] = React.useState<string>("");
   const [code, setCode] = React.useState<string>("");
   const [step, setStep] = React.useState<"email" | "code">("email");
@@ -82,8 +85,20 @@ const HexclaveLogin: () => JSX.Element = () => {
     };
   }, [resendRemaining]);
 
+  const readEmail: () => string = (): string => {
+    const fromInput: string = (emailInput.current?.value || "").trim();
+    if (fromInput && fromInput !== email.trim()) {
+      setEmail(fromInput);
+    }
+    return fromInput || email.trim();
+  };
+
   const sendCode: () => Promise<void> = async (): Promise<void> => {
-    const address: string = email.trim();
+    const address: string = readEmail();
+    if (!address) {
+      setMessage("Enter your email.");
+      return;
+    }
     if (!isAllowedEmail(address)) {
       setMessage(`Only existing @${ALLOWED_EMAIL_DOMAIN} identities can sign in.`);
       return;
@@ -272,26 +287,28 @@ const HexclaveLogin: () => JSX.Element = () => {
           <p className="lede">We will email you a one-time code. No password.</p>
           {step === "email" ? (
             <>
-              <label htmlFor="marfi-pulse-email">Email</label>
-              <input
-                id="marfi-pulse-email"
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
-                  setEmail(event.target.value);
-                }}
-              />
-              <button
-                type="button"
-                className="primary"
-                disabled={busy}
-                onClick={() => {
+              <form
+                onSubmit={(event: React.FormEvent<HTMLFormElement>) => {
+                  event.preventDefault();
                   void sendCode();
                 }}
               >
-                Email me a code
-              </button>
+                <label htmlFor="marfi-pulse-email">Email</label>
+                <input
+                  id="marfi-pulse-email"
+                  ref={emailInput}
+                  type="email"
+                  name="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                    setEmail(event.target.value);
+                  }}
+                />
+                <button type="submit" className="primary" disabled={busy}>
+                  Email me a code
+                </button>
+              </form>
             </>
           ) : (
             <>
